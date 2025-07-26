@@ -7,6 +7,7 @@ import com.localtest.service.WebSocketClientService;
 import com.localtest.service.AccessKeyService;
 import com.localtest.service.ProtocolService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,9 @@ public class TestController {
     private final WebSocketClientService wsService;
     private final AccessKeyService accessKeyService;
     private final ProtocolService protocolService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    @Autowired
+    private final ObjectMapper objectMapper;
 
     @GetMapping("/")
     public String index(Model model) {
@@ -114,6 +117,35 @@ public class TestController {
             return "OK";
         } else {
             return "Command not found: " + commandName + " for " + sender;
+        }
+    }
+
+    // 연결 상태 확인 API
+    @GetMapping("/connection-status")
+    @ResponseBody
+    public String getConnectionStatus(@RequestParam String deviceType) {
+        try {
+            ObjectNode result = objectMapper.createObjectNode();
+            boolean isConnected = wsService.isConnected(deviceType);
+            result.put("connected", isConnected);
+            result.put("deviceType", deviceType);
+            return objectMapper.writeValueAsString(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{\"error\":\"" + e.getMessage() + "\"}";
+        }
+    }
+
+    // 연결 해제 API
+    @PostMapping("/disconnect")
+    @ResponseBody
+    public String disconnect(@RequestParam String deviceType) {
+        try {
+            wsService.disconnect(deviceType);
+            return "OK";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
         }
     }
 }
