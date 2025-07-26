@@ -48,9 +48,20 @@ public class WebSocketClientService {
         try {
             String vinId = deviceId; // 테스트용
             String accessKey = accessKeyService.generateAccessKey(deviceId, vinId);
-            String msg = String.format(
-                "{\"deviceId\":\"%s\",\"command\":\"remote_connection\",\"requestType\":\"%s\",\"accessKey\":\"%s\"}",
-                deviceId, deviceType, accessKey);
+            
+            String msg;
+            if ("app".equalsIgnoreCase(deviceType)) {
+                // APP 초기 연결 메시지
+                msg = String.format(
+                    "{\"requestType\":\"app\",\"deviceId\":\"%s\",\"command\":\"remote_connection\",\"accessKey\":\"%s\"}",
+                    deviceId, accessKey);
+            } else {
+                // ADCU 초기 연결 메시지
+                msg = String.format(
+                    "{\"deviceId\":\"%s\",\"command\":\"remote_connection\"}",
+                    deviceId);
+            }
+            
             lastRequestMap.put(deviceType.toLowerCase(), msg);
             clients.get(deviceType.toLowerCase()).send(msg);
         } catch (Exception e) {

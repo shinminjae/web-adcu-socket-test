@@ -2,57 +2,549 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>WEB-ADCU WebSocket 테스트 v5.4</title>
-    <script>
-        async function connect(type) {
-            const url = document.getElementById(type + "_url").value;
-            const id = document.getElementById(type + "_id").value;
-            await fetch('/connect?serverUrl=' + encodeURIComponent(url) + '&deviceId=' + encodeURIComponent(id) + '&deviceType=' + type, {method: 'POST'});
-            alert(type.toUpperCase() + " 연결됨");
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WEB-ADCU WebSocket 테스트 v5.4 - 프로토콜 테스터</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-
-        async function sendCommand(type) {
-            const cmd = document.getElementById(type + "_cmd").value;
-            await fetch('/send-command?deviceType=' + type, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: cmd});
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-
-        async function refresh(type) {
-            const res = await fetch('/latest?deviceType=' + type);
-            const data = await res.json();
-            document.getElementById(type + "_req").innerText = data.request;
-            document.getElementById(type + "_res").innerText = data.response;
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-
-        window.onload = () => { setInterval(() => { refresh('app'); refresh('robot'); }, 1000); };
-    </script>
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .connection-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .connection-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 100px;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 65, 108, 0.4);
+        }
+        
+        .protocol-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .protocol-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s;
+        }
+        
+        .protocol-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .protocol-card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .command-list {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .command-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+        
+        .command-item:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+        }
+        
+        .command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .command-name {
+            font-weight: 600;
+            color: #2c3e50;
+            flex: 1;
+        }
+        
+        .command-description {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .command-json {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .status-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .status-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .status-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .status-card h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .status-content {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .protocol-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
 </head>
 <body>
-<h2>APP 연결</h2>
-서버 URL: <input id="app_url" value="ws://localhost:8908/ws">
-디바이스 ID: <input id="app_id" value="TRACTOR_001">
-<button onclick="connect('app')">APP 연결</button>
+    <div class="container">
+        <div class="header">
+            <h1>🌾 WEB-ADCU WebSocket 테스트</h1>
+            <p>Module-Socket 서버와의 프로토콜 테스터 v5.4</p>
+        </div>
+        
+        <div class="content">
+            <!-- 연결 설정 섹션 -->
+            <div class="connection-section">
+                <h2>🔗 WebSocket 연결 설정</h2>
+                <div class="input-group">
+                    <label>서버 URL:</label>
+                    <input type="text" id="serverUrl" value="ws://localhost:8908/ws" placeholder="WebSocket 서버 URL">
+                </div>
+                <div class="input-group">
+                    <label>디바이스 ID:</label>
+                    <input type="text" id="deviceId" value="TRACTOR_001" placeholder="디바이스 ID">
+                </div>
+                <div class="input-group">
+                    <button class="btn btn-primary" onclick="connect('app')">📱 APP 연결</button>
+                    <button class="btn btn-primary" onclick="connect('adcu')">🤖 ADCU 연결</button>
+                    <button class="btn btn-danger" onclick="disconnectAll()">❌ 모든 연결 해제</button>
+                </div>
+            </div>
+            
+            <!-- 프로토콜 테스트 섹션 -->
+            <div class="protocol-section">
+                <!-- APP 명령어 -->
+                <div class="protocol-card">
+                    <h3>📱 APP 명령어 (클라이언트 → 서버)</h3>
+                    <div class="command-list" id="appCommands">
+                        <div class="loading">명령어 목록을 불러오는 중...</div>
+                    </div>
+                </div>
+                
+                <!-- ADCU 명령어 -->
+                <div class="protocol-card">
+                    <h3>🤖 ADCU 명령어 (서버 → 클라이언트)</h3>
+                    <div class="command-list" id="adcuCommands">
+                        <div class="loading">명령어 목록을 불러오는 중...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 상태 모니터링 섹션 -->
+            <div class="status-section">
+                <h2>📊 실시간 상태 모니터링</h2>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <h4>📱 APP 연결 상태</h4>
+                        <div class="connection-status" id="appStatus">연결 해제됨</div>
+                        <h4 style="margin-top: 15px;">최근 요청</h4>
+                        <div class="status-content" id="appRequest">대기 중...</div>
+                        <h4 style="margin-top: 15px;">최근 응답</h4>
+                        <div class="status-content" id="appResponse">대기 중...</div>
+                    </div>
+                    
+                    <div class="status-card">
+                        <h4>🤖 ADCU 연결 상태</h4>
+                        <div class="connection-status" id="adcuStatus">연결 해제됨</div>
+                        <h4 style="margin-top: 15px;">최근 요청</h4>
+                        <div class="status-content" id="adcuRequest">대기 중...</div>
+                        <h4 style="margin-top: 15px;">최근 응답</h4>
+                        <div class="status-content" id="adcuResponse">대기 중...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<h3>APP 최근 요청 / 응답</h3>
-요청: <pre id="app_req"></pre>
-응답: <pre id="app_res"></pre>
-
-<h3>APP 명령어 전송</h3>
-<textarea id="app_cmd" rows="5" cols="50">{ "deviceId": "TRACTOR_001", "command": "remote_autodriving", "requestType": "app", "target": "start" }</textarea><br>
-<button onclick="sendCommand('app')">APP 명령 전송</button>
-
-<hr>
-
-<h2>ROBOT 연결</h2>
-서버 URL: <input id="robot_url" value="ws://localhost:8908/ws">
-디바이스 ID: <input id="robot_id" value="TRACTOR_001">
-<button onclick="connect('robot')">ROBOT 연결</button>
-
-<h3>ROBOT 최근 요청 / 응답</h3>
-요청: <pre id="robot_req"></pre>
-응답: <pre id="robot_res"></pre>
-
-<h3>ROBOT 명령어 전송</h3>
-<textarea id="robot_cmd" rows="5" cols="50">{ "deviceId": "TRACTOR_001", "command": "vehicle_status", "requestType": "robot", "lat": "37.5665", "lon": "126.9780", "message": "정상 운행 중" }</textarea><br>
-<button onclick="sendCommand('robot')">ROBOT 명령 전송</button>
+    <script>
+        let protocols = {};
+        
+        // 페이지 로드 시 프로토콜 정보 가져오기
+        async function loadProtocols() {
+            try {
+                console.log('프로토콜 데이터 로딩 시작...');
+                const response = await fetch('/protocols');
+                console.log('API 응답:', response);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('로드된 프로토콜 데이터:', data);
+                
+                protocols = data;
+                renderCommands();
+            } catch (error) {
+                console.error('프로토콜 로드 실패:', error);
+                // 오류 발생 시 기본 데이터로 폴백
+                loadFallbackProtocols();
+            }
+        }
+        
+        // 폴백 프로토콜 데이터
+        function loadFallbackProtocols() {
+            protocols = {
+                app: [
+                    { name: "시작", description: "자율주행 시작", json: '{ "requestType": "app", "deviceId": "TRACTOR_001", "command": "remote_go" }' },
+                    { name: "멈춤", description: "자율주행 중지", json: '{ "requestType": "app", "deviceId": "TRACTOR_001", "command": "remote_stop" }' },
+                    { name: "홈 (복귀주행)", description: "홈으로 복귀주행", json: '{ "requestType": "app", "deviceId": "TRACTOR_001", "command": "remote_autodriving", "target": "home" }' }
+                ],
+                adcu: [
+                    { name: "실시간 위치", description: "실시간 위치 정보 전송", json: '{ "responseType": "adcu", "deviceId": "TRACTOR_001", "command": "RealtimeLocation", "log": true }' },
+                    { name: "차량 상태", description: "차량 상태 정보 전송", json: '{ "responseType": "adcu", "deviceId": "TRACTOR_001", "command": "vehicle_status", "lat": "37.5665", "lon": "126.9780", "message": "정상 운행 중" }' }
+                ]
+            };
+            renderCommands();
+        }
+        
+        // 명령어 목록 렌더링
+        function renderCommands() {
+            console.log('명령어 렌더링 시작...');
+            renderCommandList('appCommands', protocols.app || []);
+            renderCommandList('adcuCommands', protocols.adcu || []);
+        }
+        
+        function renderCommandList(containerId, commands) {
+            console.log(`${containerId} 렌더링:`, commands);
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            if (!commands || commands.length === 0) {
+                container.innerHTML = '<div class="loading">명령어가 없습니다.</div>';
+                return;
+            }
+            
+            commands.forEach(cmd => {
+                const commandItem = document.createElement('div');
+                commandItem.className = 'command-item';
+                commandItem.innerHTML = `
+                    <div class="command-header">
+                        <span class="command-name">${cmd.name}</span>
+                        <button class="btn btn-success" onclick="sendProtocol('${containerId === 'appCommands' ? 'app' : 'adcu'}', '${cmd.name}')">
+                            전송
+                        </button>
+                    </div>
+                    <div class="command-description">${cmd.description}</div>
+                    <div class="command-json">${cmd.json}</div>
+                `;
+                container.appendChild(commandItem);
+            });
+        }
+        
+        // WebSocket 연결
+        async function connect(type) {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const deviceId = document.getElementById('deviceId').value;
+            
+            if (!serverUrl || !deviceId) {
+                alert('서버 URL과 디바이스 ID를 입력해주세요.');
+                return;
+            }
+            
+            try {
+                await fetch('/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `serverUrl=${encodeURIComponent(serverUrl)}&deviceId=${encodeURIComponent(deviceId)}&deviceType=${type}`
+                });
+                
+                updateConnectionStatus(type, true);
+                alert(`${type.toUpperCase()} 연결 성공!`);
+            } catch (error) {
+                console.error('연결 실패:', error);
+                alert('연결에 실패했습니다.');
+            }
+        }
+        
+        // 모든 연결 해제
+        async function disconnectAll() {
+            // 실제로는 서버에서 연결 해제 로직이 필요
+            updateConnectionStatus('app', false);
+            updateConnectionStatus('adcu', false);
+            alert('모든 연결이 해제되었습니다.');
+        }
+        
+        // 프로토콜 명령어 전송
+        async function sendProtocol(type, commandName) {
+            console.log('=== sendProtocol 호출 ===');
+            console.log('type:', type);
+            console.log('commandName:', commandName);
+            
+            try {
+                const response = await fetch('/send-protocol', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `deviceType=${type}&commandName=${encodeURIComponent(commandName)}`
+                });
+                
+                console.log('응답 상태:', response.status);
+                const result = await response.text();
+                console.log('응답 내용:', result);
+                
+                if (result === 'OK') {
+                    alert(`${commandName} 명령어가 전송되었습니다.`);
+                } else {
+                    alert(`명령어 전송 실패: ${result}`);
+                }
+            } catch (error) {
+                console.error('명령어 전송 실패:', error);
+                alert('명령어 전송에 실패했습니다: ' + error.message);
+            }
+        }
+        
+        // 연결 상태 업데이트
+        function updateConnectionStatus(type, connected) {
+            const statusElement = document.getElementById(`${type}Status`);
+            if (connected) {
+                statusElement.textContent = '연결됨';
+                statusElement.className = 'connection-status status-connected';
+            } else {
+                statusElement.textContent = '연결 해제됨';
+                statusElement.className = 'connection-status status-disconnected';
+            }
+        }
+        
+        // 상태 정보 갱신
+        async function refreshStatus() {
+            try {
+                // APP 상태 갱신
+                const appResponse = await fetch('/latest?deviceType=app');
+                const appData = await appResponse.json();
+                document.getElementById('appRequest').textContent = appData.request || '대기 중...';
+                document.getElementById('appResponse').textContent = appData.response || '대기 중...';
+                
+                // ADCU 상태 갱신
+                const adcuResponse = await fetch('/latest?deviceType=adcu');
+                const adcuData = await adcuResponse.json();
+                document.getElementById('adcuRequest').textContent = adcuData.request || '대기 중...';
+                document.getElementById('adcuResponse').textContent = adcuData.response || '대기 중...';
+            } catch (error) {
+                console.error('상태 갱신 실패:', error);
+            }
+        }
+        
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            console.log('페이지 로드됨, 프로토콜 로딩 시작...');
+            loadProtocols();
+            // 1초마다 상태 갱신
+            setInterval(refreshStatus, 1000);
+        };
+    </script>
 </body>
 </html>
