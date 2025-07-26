@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>WEB-ADCU WebSocket 테스트 v5.4</title>
+    <script>
+        async function connect(type) {
+            const url = document.getElementById(type + "_url").value;
+            const id = document.getElementById(type + "_id").value;
+            await fetch('/connect?serverUrl=' + encodeURIComponent(url) + '&deviceId=' + encodeURIComponent(id) + '&deviceType=' + type, {method: 'POST'});
+            alert(type.toUpperCase() + " 연결됨");
+        }
+
+        async function sendCommand(type) {
+            const cmd = document.getElementById(type + "_cmd").value;
+            await fetch('/send-command?deviceType=' + type, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: cmd});
+        }
+
+        async function refresh(type) {
+            const res = await fetch('/latest?deviceType=' + type);
+            const data = await res.json();
+            document.getElementById(type + "_req").innerText = data.request;
+            document.getElementById(type + "_res").innerText = data.response;
+        }
+
+        window.onload = () => { setInterval(() => { refresh('app'); refresh('robot'); }, 1000); };
+    </script>
+</head>
+<body>
+<h2>APP 연결</h2>
+서버 URL: <input id="app_url" value="ws://localhost:8908/ws">
+디바이스 ID: <input id="app_id" value="TRACTOR_001">
+<button onclick="connect('app')">APP 연결</button>
+
+<h3>APP 최근 요청 / 응답</h3>
+요청: <pre id="app_req"></pre>
+응답: <pre id="app_res"></pre>
+
+<h3>APP 명령어 전송</h3>
+<textarea id="app_cmd" rows="5" cols="50">{ "deviceId": "TRACTOR_001", "command": "remote_autodriving", "requestType": "app", "target": "start" }</textarea><br>
+<button onclick="sendCommand('app')">APP 명령 전송</button>
+
+<hr>
+
+<h2>ROBOT 연결</h2>
+서버 URL: <input id="robot_url" value="ws://localhost:8908/ws">
+디바이스 ID: <input id="robot_id" value="TRACTOR_001">
+<button onclick="connect('robot')">ROBOT 연결</button>
+
+<h3>ROBOT 최근 요청 / 응답</h3>
+요청: <pre id="robot_req"></pre>
+응답: <pre id="robot_res"></pre>
+
+<h3>ROBOT 명령어 전송</h3>
+<textarea id="robot_cmd" rows="5" cols="50">{ "deviceId": "TRACTOR_001", "command": "vehicle_status", "requestType": "robot", "lat": "37.5665", "lon": "126.9780", "message": "정상 운행 중" }</textarea><br>
+<button onclick="sendCommand('robot')">ROBOT 명령 전송</button>
+</body>
+</html>
